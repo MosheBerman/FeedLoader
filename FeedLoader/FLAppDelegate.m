@@ -7,9 +7,9 @@
 //
 
 #import "FLAppDelegate.h"
+#import "FLDownloader.h"
 
-@interface FLAppDelegate () {
-    NSInteger loadedPages;
+@interface FLAppDelegate () <FLDownloaderDelegate> {
     
     NSDate *startTime;
     NSDate *endTime;
@@ -29,16 +29,24 @@
 
 @property (strong) NSMutableDictionary *usersByID;
 
+@property (strong) NSString *initialURL;
+
 @property (strong) NSString *nextPagingURL;
+
+@property (nonatomic, strong) FLDownloader *downloader;
+
 
 @property (weak) IBOutlet NSTextField *outputLabel;
 @property (weak) IBOutlet NSButton *startButton;
 @property (weak) IBOutlet NSProgressIndicator *progressBar;
 @property (weak) IBOutlet NSButton *analyzeButton;
 
-@end
 
-typedef void(^FLDowloadCompletionBlock)(BOOL success);
+#define kPostID @"10152800390984124"
+
+#define kTokenID @"CAACEdEose0cBAJEUdNgHOH9g2EliZCZAJRDhwZAeDu80EaAqF4hVbAKMjShL1R0RwZCZCIMUJkemfeMqF1dUba0WN9tQeoP7ZCJM8k0kktLB5rNKKetNHIFLziBcqlx1xH2OEBb5DjZB2DTJMEoGyPqKISsZB1BgZCOgOb4yfbTbNxdUNz88XedUb6sdRfXzRLzxgmoS3RETFzJYnbpcZBPS0kRvhP8F1u4oYZD"
+
+@end
 
 @implementation FLAppDelegate
 
@@ -46,7 +54,7 @@ typedef void(^FLDowloadCompletionBlock)(BOOL success);
 {
     // Insert code here to initialize your application
     
-    self.nextPagingURL = @"https://graph.facebook.com/me/feed?since=1340323200&access_token=CAACuTTrtcLgBAGfHgqNCUb8qXqac1yhazwk1EZBADwZBdQZB7PIT1CGgiOmWmL86PxTWiSVY8yCQhAtZBYFel427s8SZBJZBimthz4aZCVlZCsRdtLiGPJQKwLNYYG2A4hzBJsWZCZBKS95csOa5H2csVavDB1eOiL5vjUTfPAnQSPjS67m6OtBCgUjCDcVQBmq64ZD";
+    //    self.nextPagingURL = @"https://graph.facebook.com/me/feed?since=1340323200&access_token=CAACuTTrtcLgBAGfHgqNCUb8qXqac1yhazwk1EZBADwZBdQZB7PIT1CGgiOmWmL86PxTWiSVY8yCQhAtZBYFel427s8SZBJZBimthz4aZCVlZCsRdtLiGPJQKwLNYYG2A4hzBJsWZCZBKS95csOa5H2csVavDB1eOiL5vjUTfPAnQSPjS67m6OtBCgUjCDcVQBmq64ZD";
     
     self.posts = [[NSMutableArray alloc] init];
     
@@ -60,138 +68,9 @@ typedef void(^FLDowloadCompletionBlock)(BOOL success);
     
     self.usersByID = [[NSMutableDictionary alloc] init];
     
-    loadedPages = 0;
+    self.downloader = [[FLDownloader alloc] init];
+    self.downloader.delegate = self;
     
-    
-    
-}
-
-- (void)downloadDataSegmentWithCompletion:(FLDowloadCompletionBlock)completion
-{
-    
-    /** Ensure we have aURL before we try to load a segment. */
-    if (!self.nextPagingURL) {
-        return;
-    }
-    
-    __weak FLAppDelegate *weakSelf = self;
-    
-    NSURL *url = [NSURL URLWithString:self.nextPagingURL];
-    
-    NSURLRequest *request = [NSURLRequest requestWithURL:url];
-    
-    [NSURLConnection sendAsynchronousRequest:request queue:[NSOperationQueue mainQueue] completionHandler:^(NSURLResponse *response, NSData *data, NSError *error) {
-        
-        /** If there's an error loading the data, fail. */
-        if (error) {
-            [self showErrorAlertWithError:error];
-        }
-        
-        /** Else, let's attempt to convert the data to a dictionary. */
-        else {
-            
-            NSDictionary *responseDictionary = [NSJSONSerialization JSONObjectWithData:data options:0 error:&error];
-            
-            /** If there was an error loading the data, show the error. */
-            if (error)
-            {
-                [self showErrorAlertWithError:error];
-                weakSelf.nextPagingURL = nil;
-            }
-            
-            /** Else, let's check for nil data */
-            else if (!responseDictionary)
-            {
-                NSDictionary *errorDictionary = @{@"code" : @(-1), @"message" : @"Failed to convert data into a dictionary."};
-                [self showErrorAlertWithDictionary:errorDictionary];
-                weakSelf.nextPagingURL = nil;
-            }
-            
-            /** Else, let's parse the segment. */
-            else
-            {
-                
-                NSDictionary *feed = responseDictionary[@"data"];
-                
-                /** If there's no data, we've got an issue. */
-                if (!feed) {
-                    NSDictionary *errorDictionary = @{@"code" : @(-2), @"message" : @"There seems to be no data..."};
-                    [self showErrorAlertWithDictionary:errorDictionary];
-                    weakSelf.nextPagingURL = nil;
-                }
-                
-                /** Otherwise, let's pull out the data, then check for the next page. */
-                else
-                {
-                    
-                    /** If the paged part of the stream is empty, finish. */
-                    if (![feed count]) {
-                        self.nextPagingURL = nil;
-                    }
-                    
-                    
-                    /** Else, process each post in the stream. */
-                    
-                    else {
-                        /** Iterate each post. Nothing fancy yet. */
-                        for (NSDictionary *post in feed) {
-                            [weakSelf.posts addObject:post];
-                        }
-                        
-                        loadedPages++;
-                        [self updateUI];
-                    }
-                }
-                
-                /** Now check for paging information. */
-                NSDictionary *paging = responseDictionary[@"paging"];
-                
-                /** If there's no paging, fail silently. */
-                if (!paging) {
-                    NSLog(@"There's no paging.");
-                    weakSelf.nextPagingURL = nil;
-                }
-                
-                /** Else, check for a next URL. */
-                else if (paging[@"next"])
-                {
-                    weakSelf.nextPagingURL = paging[@"next"];
-                }
-                
-                /** If it's not there, we've hit the end. */
-                else
-                {
-                    NSDictionary *errorDictionary = @{@"code" : @(0), @"message" : @"Looks like we've hit the end of the stream."};
-                    [self showErrorAlertWithDictionary:errorDictionary];
-                    weakSelf.nextPagingURL = nil;
-                }
-            }
-            
-        }
-        
-        /** If nextPagingURL is nil by now, we're done. */
-        if (!weakSelf.nextPagingURL) {
-            
-            /** Re-enable the button. */
-            [weakSelf.startButton setEnabled:YES];
-            
-            /** Run the completion block. */
-            if (completion) {
-                completion(YES);
-            }
-            
-            /** Reset the URL. */
-            weakSelf.nextPagingURL = @"https://graph.facebook.com/me/feed?since=1340323200&access_token=CAACuTTrtcLgBAGfHgqNCUb8qXqac1yhazwk1EZBADwZBdQZB7PIT1CGgiOmWmL86PxTWiSVY8yCQhAtZBYFel427s8SZBJZBimthz4aZCVlZCsRdtLiGPJQKwLNYYG2A4hzBJsWZCZBKS95csOa5H2csVavDB1eOiL5vjUTfPAnQSPjS67m6OtBCgUjCDcVQBmq64ZD";
-        }
-        
-        /** Else, continue... */
-        else {
-            [self downloadDataSegmentWithCompletion:completion];
-            [self saveDataToDisk];
-            
-            [self updateUI];
-        }
-    }];
 }
 
 #pragma mark - Load Initialization
@@ -202,7 +81,7 @@ typedef void(^FLDowloadCompletionBlock)(BOOL success);
     
     startTime = [NSDate date];
     
-    [self downloadDataSegmentWithCompletion:^(BOOL success) {
+    [self.downloader downloadFeedWithCompletion:^(BOOL success) {
         
         /** Calculate the end time*/
         endTime = [NSDate date];
@@ -211,13 +90,28 @@ typedef void(^FLDowloadCompletionBlock)(BOOL success);
         NSTimeInterval interval = [endTime timeIntervalSince1970] - [startTime timeIntervalSince1970];
         
         /** Update the output. */
-        self.outputLabel.stringValue = [NSString stringWithFormat: @"Loaded %li segments in total over %f seconds.", (long)loadedPages, interval];
+        self.outputLabel.stringValue = [NSString stringWithFormat: @"Loaded %li segments in total over %f seconds.", (long)self.downloader.loadedPages, interval];
         
         /** Save. */
         [self saveDataToDiskQuietly:NO];
         
     }];
 }
+
+#pragma mark - FLDownloaderDelegate
+
+- (void)downloader:(FLDownloader *)downloader failedWithError:(NSDictionary *)errorData
+{
+    [self showErrorAlertWithDictionary:errorData];
+    [self updateUI];
+}
+
+- (void)downloaderDidCompleteSegment:(FLDownloader *)downloader
+{
+    [self updateUI];
+}
+
+
 
 #pragma mark - Errors.
 
@@ -250,7 +144,9 @@ typedef void(^FLDowloadCompletionBlock)(BOOL success);
 
 - (void)updateUI
 {
-    self.outputLabel.stringValue = [NSString stringWithFormat:@"Downloaded %li segments.", (long)loadedPages];
+    self.outputLabel.stringValue = [NSString stringWithFormat:@"Downloaded %li segments.", (long)self.downloader.loadedPages];
+    
+    [[self startButton] setEnabled:!self.downloader.working];
 }
 
 #pragma mark - Save
@@ -317,8 +213,11 @@ typedef void(^FLDowloadCompletionBlock)(BOOL success);
         NSError *error = nil;
         
         /** Convert to a dictionary. */
-        NSDictionary *feed = [NSJSONSerialization JSONObjectWithData:data options:0 error:&error];
+        NSArray *feed = [NSJSONSerialization JSONObjectWithData:data options:0 error:&error];
         
+        if ([feed isKindOfClass:[NSDictionary class]]) {
+            feed = ((NSDictionary *)feed)[@"data"];
+        }
         
         /** If there's an error, alert. */
         if (error) {
@@ -329,261 +228,368 @@ typedef void(^FLDowloadCompletionBlock)(BOOL success);
         else if([feed isKindOfClass:[NSArray class]])
         {
             
-            /**
-             *  Here we set up some metrics to count up.
-             *
+//            /** Count the friends by gender. */
+//            
+            NSMutableArray *males = [NSMutableArray new];
+            NSMutableArray *females =  [NSMutableArray new];
+            NSMutableArray *undeclared = [NSMutableArray new];
+//
+//            NSMutableSet *possibleKeys = [NSMutableSet set];
+//            
+//            for (NSDictionary *friendData in feed) {
+//                if ([friendData[@"gender"] isEqualToString:@"male"]) {
+//                    [males addObject:friendData[@"name"]];
+//                }
+//                else if([friendData[@"gender"] isEqualToString:@"female"])
+//                {
+//                    [females addObject:friendData[@"name"]];
+//                }
+//                else
+//                {
+//                    [undeclared addObject:friendData[@"name"]];
+//                }
+//                
+//                for (NSString *key in [friendData allKeys]) {
+//                    [possibleKeys addObject:key];
+//                }
+//            }
+            
+            /*
+             *  Print results
              */
             
-            /** Posts by key. */
-            NSMutableDictionary *postsByKey = [[NSMutableDictionary alloc] init];
+//            NSLog(@"Total friends: %li (%.2f%%)", (long)[feed count], (float)[feed count]/(float)[feed count]*100.0);
+//            NSLog(@"Male friends: %li (%.2f%%)", (long)[males count], (float)[males count]/(float)[feed count]*100.0);
+//            NSLog(@"Female friends: %li (%.2f%%)", (long)[females count], (float)females.count/(float)[feed count]*100.0);
+//            NSLog(@"Friends who don't share their gender: %li (%.2f%%)", (long)[undeclared count], (float)undeclared.count/(float)[feed count]*100.0);
+//            
+//                        NSLog(@"Friend keys: %@", possibleKeys);
+
             
-            /** Find the status types. */
-            NSMutableSet *types = [[NSMutableSet alloc] init];
-            
-            /** Find the application types. */
-            NSMutableSet *applicationTypes = [[NSMutableSet alloc] init];
-            
-            /** Likers, using names as keys. We'll invert these and sort later. */
-            NSMutableDictionary *likersAndCounts = [[NSMutableDictionary alloc] init];
-            
-            /** Likers by number of likes */
-            NSMutableArray *likersByCount = [[NSMutableArray alloc] init];
-            
-            /** Count the total number of likes. */
-            NSInteger likeCount = 0;
-            
-            /**
-             *  Prepare the progress bar.
-             */
-            
-            self.progressBar.maxValue = (double)feed.count;
-            double currentObject = 0.0; //  Use this because we don't get an index with fast enumeration.
-            
-            /**
-             *  Grab start time.
-             */
-            
-            startTime = [NSDate date];
-            
-            /**
-             *  Iterate the posts.
-             *
-             */
-            for (NSDictionary *post in feed) {
+            for (NSDictionary *user in feed) {
+                NSString *userID = user[@"id"];
                 
-                /** Check for post type. */
-                NSString *type = post[@"type"];
-                NSDictionary *app = post[@"application"];
-                NSDictionary *likes = post[@"likes"];
-                NSDictionary *comments = post[@"comments"];
-                NSString *postID = post[@"id"];
+                NSString *urlString = [NSString stringWithFormat:@"https://graph.facebook.com/%@/?fields=gender,name,id&access_token=%@",userID, @"CAACEdEose0cBAHprAdRUywGCyUVbRsbZA6EzHKNW2m877GTLa4xSkZCEW3qZA2icRhOorKjU0hQoRQtQ3ccPJs6WY3y5NlIenMIqggYVQ8OnZBTiH1V9K0NzXZCgQERJnxlCem4qhovuGWyrDr62jf78GGDyd0TklSAy61mfz88O9sMZAgkKWFwgQDaSAzGK27prAwNgJZAdgZDZD"];
+                NSURL *url = [NSURL URLWithString:urlString];
                 
-                /** Skip posts with no post ID */
-                if (!postID) {
-                    continue;
-                }
-                
-                /** Since by now we have a post with an ID, add it to the dictionary. */
-                postsByKey[postID] = post;
-                
-                /** If the type exists, add to the set. */
-                if (type) {
-                    [types addObject:type];
-                }
-                else {
-                    NSLog(@"Found a post with no type. Weird.");
-                }
-                
-                /** Try to parse out the application. */
-                if (app) {
-                    NSString *appName = app[@"name"];
+                [NSURLConnection sendAsynchronousRequest:[NSURLRequest requestWithURL:url] queue:[NSOperationQueue mainQueue] completionHandler:^(NSURLResponse *response  , NSData *data, NSError *error) {
                     
-                    /** If there's an app name, add to the set.*/
-                    if (appName) {
-                        [applicationTypes addObject:appName];
-                    }
-                }
-                
-                /** Look for likes on a post*/
-                if (likes) {
-                    
-                    /** Ensure there's an array of "likers". */
-                    NSArray *likers = likes[@"data"];
-                    
-                    /** If we've got an array, do some things with the likers. */
-                    if ([likers isKindOfClass:[NSArray class]]) {
+                    if (data) {
                         
-                        /** Add the tally of likes to the post. */
-                        NSInteger likeCountForThisPost = [likers count];
-                        likeCount += likeCountForThisPost;
+
+                        NSDictionary* responseData = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
                         
-                        /** Count likes per person. */
-                        for (NSDictionary *liker in likers) {
-                            
-                            NSString *name = liker[@"name"];
-                            
-                            /** If the liker is new, add them to the likersAndCounts dictionary. */
-                            if (!likersAndCounts[name]) {
-                                
-                                /**
-                                 *  Add the user by name with a count and an array of posts IDs.
-                                 */
-                                likersAndCounts[name] = [[NSMutableDictionary alloc] initWithObjects:@[@(0), [[NSMutableArray alloc] init]] forKeys:@[@"count", @"posts"]];
-                            }
-                            
-                            NSMutableDictionary *likeDataForUser = likersAndCounts[name];
-                            
-                            /** Increment the number of likes. */
-                            likeDataForUser[@"count"] = @([likeDataForUser[@"count"] integerValue]+1);
-                            
-                            /** Add the postID in to the user's like data. */
-                            [likeDataForUser[@"posts"] addObject:postID];
+                        
+                        if ([responseData[@"gender"] isEqualToString:@"male"]) {
+                            [males addObject:responseData];
                         }
-                    }
-                }
-                
-                /** Order likers by count. */
-                for (NSString *key in [likersAndCounts allKeys]) {
-                    
-                    /** Get the likes per key. */
-                    NSInteger likesPerKey = [likersAndCounts[key][@"count"] integerValue];
-                    
-                    /** Insert the first object by default. */
-                    if (![likersByCount count]) {
-                        [likersByCount addObject:key];
-                    }
-                    
-                    /** Else, add at the correct location.*/
-                    else {
-                        /** Avoid adding users twice. */
-                        if (![likersByCount containsObject:key]) {
-                            
-                            for (NSInteger i = 0; i < [likersByCount count]; i++) {
-                                
-                                NSDictionary *liker = likersByCount[i];
-                                
-                                if (i+1 < [likersByCount count]-1) {
-                                    
-                                    NSDictionary *nextLiker = likersByCount[i+1];
-                                    
-                                    NSInteger likeCountForLiker = [likersAndCounts[liker][@"count"] integerValue];
-                                    NSInteger likeCountForNextLiker = [likersAndCounts[nextLiker][@"count"] integerValue];
-                                    
-                                    /** If the new liker has more likes than the one
-                                     *  we're comparing, put the new liker in front.
-                                     */
-                                    if (likesPerKey > likeCountForLiker && likesPerKey < likeCountForNextLiker) {
-                                        [likersByCount insertObject:key atIndex:i];
-                                        break;
-                                    }
-                                }
-                                
-                            }
+                        else if([responseData[@"gender"] isEqualToString:@"female"])
+                        {
+                            [females addObject:responseData];
+                        }
+                        else
+                        {
+                            [undeclared addObject:responseData];
                         }
                     }
                     
-                    /** 
-                     *  If we've reached the end and the liker isn't in the post
-                     *  then we need to add the user.
-                     */
+                    NSInteger mCount = [males count];
+                    NSInteger fCount = [females count];
+                    NSInteger uCount = [undeclared count];
                     
-                    if (![likersByCount containsObject:key]) {
-                        [likersByCount addObject:key];
+                    NSInteger total = mCount + fCount + uCount;
+                    
+                    if (total == [feed count]) {
+                        
+                        NSLog(@"Males: %.2f,\nFemales: %.2f\nUndeclared:%2f",(double)mCount/(double)feed.count*100, (double)fCount/feed.count*100, (double)uCount/feed.count*100);
+                        
                     }
-                }
-                
-                /** Look for likes on the comments. */
-                if (comments) {
                     
-                    /** Iterate the comments, looking for ones posted by me. */
-                    NSArray *commentContentsForPost = comments[@"data"];
-                    
-                    if ([commentContentsForPost isKindOfClass:[NSArray class]]) {
-                        /** Iterate the comments. */
-                        for (NSDictionary *comment in commentContentsForPost) {
-                            
-                            /** Read the commenter metadata. */
-                            NSDictionary *commenter = comment[@"from"];
-                            NSString *commenterName = commenter[@"name"];
-                            
-                            /** If we've found one of my own comments, count the likes. :-) */
-                            if ([commenterName isEqualToString:@"Moshe Berman"]) {
-                                NSNumber *numberOfLikesOnComment = comment[@"like_count"];
-                                likeCount += [numberOfLikesOnComment integerValue];
-                            }
-                            
-                            /** We can't get per user likes on a comment with the current data set. */
-                            
-                        }
-                    }
-                }
+                }];
                 
-                /**
-                 *  Update progress bar.
-                 */
-                
-                currentObject += 1.0;
-                self.progressBar.doubleValue = currentObject;
-                self.outputLabel.stringValue = [NSString stringWithFormat:@"Processed %li of %li posts.", (long)currentObject, (long)feed.count];
             }
             
-            /**
-             *  Log the results.
-             */
-            
-            NSLog(@"Total likes: %li", likeCount);
-            NSLog(@"Application Types: %@", applicationTypes);
-            NSLog(@"Post Types: %@", types);
-            NSLog(@"Likers (Most to Least): %@", likersByCount);
-            NSLog(@"Likers and Like Counts: %@", likersAndCounts);
-            
-            /** Print likers by count. */
-            for (NSInteger i = 0; i < [likersByCount count]; i++) {
-                
-                NSString *liker = likersByCount[i]; //  Liker name
-                NSNumber *likes = likersAndCounts[liker][@"count"];   // Liker count
-               
-                NSString *summary = [NSString stringWithFormat:@"%@ : %li", liker, (long)[likes integerValue]];
-                NSLog(@"%@", summary);
-            }
-            
-            /**
-             *  Save some files...
-             */
-            
-            NSDictionary *summary = @{@"feed" : feed,
-                                      @"posts_by_key" : postsByKey,
-                                      @"like_count": @(likeCount),
-                                      @"likers_by_likes" : likersByCount,
-                                      @"likers_and_counts" : likersAndCounts};
-            
-            NSData *summaryData = [NSJSONSerialization dataWithJSONObject:summary options:9 error:nil];
-            
-            NSString *path = [[self pathToDesktop] stringByAppendingPathComponent:@"likes.json"];
-            
-            [summaryData writeToFile:path atomically:NO];
-            
-            /**
-             *  Calculate runtime.
-             */
-            
-            endTime = [NSDate date];
-            
-            NSTimeInterval runtime = [endTime timeIntervalSince1970] - [startTime timeIntervalSince1970];
-            
-            /**
-             *  Update the UI.
-             */
-            
-            [[self startButton] setEnabled:YES];
-            [[self analyzeButton] setEnabled:YES];
-            
-            self.outputLabel.stringValue = [NSString stringWithFormat:@"Took %f seconds.", (double)runtime];
-             
+//            /** Load up the followers */
+//            NSString *pathToFollowers = [[[self pathToJSONFile] stringByDeletingLastPathComponent] stringByAppendingPathComponent:@"followers.json"];
+//            data = [NSData dataWithContentsOfFile:pathToFollowers];
+//            
+//            if (data) {
+//                NSArray *followers = [NSJSONSerialization JSONObjectWithData:data options:0 error:&error];
+//                
+//                if (error) {
+//                    NSLog(@"Error loading followers");
+//                }
+//                
+//                else
+//                {
+//                    NSMutableSet *friendSet = [NSMutableSet setWithArray:feed];
+//                    NSMutableSet *followSet = [NSMutableSet setWithArray:followers];
+//                    [followSet intersectSet:friendSet];
+//                    
+//                    NSLog(@"Friends who also follow: %@", followSet );
+//                }
+//            }
         }
+        
+//        {
+//            
+//            /**
+//             *  Here we set up some metrics to count up.
+//             *
+//             */
+//            
+//            /** Posts by key. */
+//            NSMutableDictionary *postsByKey = [[NSMutableDictionary alloc] init];
+//            
+//            /** Find the status types. */
+//            NSMutableSet *types = [[NSMutableSet alloc] init];
+//            
+//            /** Find the application types. */
+//            NSMutableSet *applicationTypes = [[NSMutableSet alloc] init];
+//            
+//            /** Likers, using names as keys. We'll invert these and sort later. */
+//            NSMutableDictionary *likersAndCounts = [[NSMutableDictionary alloc] init];
+//            
+//            /** Likers by number of likes */
+//            NSMutableArray *likersByCount = [[NSMutableArray alloc] init];
+//            
+//            /** Count the total number of likes. */
+//            NSInteger likeCount = 0;
+//            
+//            /**
+//             *  Prepare the progress bar.
+//             */
+//            
+//            self.progressBar.maxValue = (double)feed.count;
+//            double currentObject = 0.0; //  Use this because we don't get an index with fast enumeration.
+//            
+//            /**
+//             *  Grab start time.
+//             */
+//            
+//            startTime = [NSDate date];
+//            
+//            /**
+//             *  Iterate the posts.
+//             *
+//             */
+//            for (NSDictionary *post in feed) {
+//                
+//                /** Check for post type. */
+//                NSString *type = post[@"type"];
+//                NSDictionary *app = post[@"application"];
+//                NSDictionary *likes = post[@"likes"];
+//                NSDictionary *comments = post[@"comments"];
+//                NSString *postID = post[@"id"];
+//                
+//                /** Skip posts with no post ID */
+//                if (!postID) {
+//                    continue;
+//                }
+//                
+//                /** Since by now we have a post with an ID, add it to the dictionary. */
+//                postsByKey[postID] = post;
+//                
+//                /** If the type exists, add to the set. */
+//                if (type) {
+//                    [types addObject:type];
+//                }
+//                else {
+//                    NSLog(@"Found a post with no type. Weird.");
+//                }
+//                
+//                /** Try to parse out the application. */
+//                if (app) {
+//                    NSString *appName = app[@"name"];
+//                    
+//                    /** If there's an app name, add to the set.*/
+//                    if (appName) {
+//                        [applicationTypes addObject:appName];
+//                    }
+//                }
+//                
+//                /** Look for likes on a post*/
+//                if (likes) {
+//                    
+//                    /** Ensure there's an array of "likers". */
+//                    NSArray *likers = likes[@"data"];
+//                    
+//                    /** If we've got an array, do some things with the likers. */
+//                    if ([likers isKindOfClass:[NSArray class]]) {
+//                        
+//                        /** Add the tally of likes to the post. */
+//                        NSInteger likeCountForThisPost = [likers count];
+//                        likeCount += likeCountForThisPost;
+//                        
+//                        /** Count likes per person. */
+//                        for (NSDictionary *liker in likers) {
+//                            
+//                            NSString *name = liker[@"name"];
+//                            
+//                            /** If the liker is new, add them to the likersAndCounts dictionary. */
+//                            if (!likersAndCounts[name]) {
+//                                
+//                                /**
+//                                 *  Add the user by name with a count and an array of posts IDs.
+//                                 */
+//                                likersAndCounts[name] = [[NSMutableDictionary alloc] initWithObjects:@[@(0), [[NSMutableArray alloc] init]] forKeys:@[@"count", @"posts"]];
+//                            }
+//                            
+//                            NSMutableDictionary *likeDataForUser = likersAndCounts[name];
+//                            
+//                            /** Increment the number of likes. */
+//                            likeDataForUser[@"count"] = @([likeDataForUser[@"count"] integerValue]+1);
+//                            
+//                            /** Add the postID in to the user's like data. */
+//                            [likeDataForUser[@"posts"] addObject:postID];
+//                        }
+//                    }
+//                }
+//                
+//                /** Order likers by count. */
+//                for (NSString *key in [likersAndCounts allKeys]) {
+//                    
+//                    /** Get the likes per key. */
+//                    NSInteger likesPerKey = [likersAndCounts[key][@"count"] integerValue];
+//                    
+//                    /** Insert the first object by default. */
+//                    if (![likersByCount count]) {
+//                        [likersByCount addObject:key];
+//                    }
+//                    
+//                    /** Else, add at the correct location.*/
+//                    else {
+//                        /** Avoid adding users twice. */
+//                        if (![likersByCount containsObject:key]) {
+//                            
+//                            for (NSInteger i = 0; i < [likersByCount count]; i++) {
+//                                
+//                                NSDictionary *liker = likersByCount[i];
+//                                
+//                                if (i+1 < [likersByCount count]-1) {
+//                                    
+//                                    NSDictionary *nextLiker = likersByCount[i+1];
+//                                    
+//                                    NSInteger likeCountForLiker = [likersAndCounts[liker][@"count"] integerValue];
+//                                    NSInteger likeCountForNextLiker = [likersAndCounts[nextLiker][@"count"] integerValue];
+//                                    
+//                                    /** If the new liker has more likes than the one
+//                                     *  we're comparing, put the new liker in front.
+//                                     */
+//                                    if (likesPerKey > likeCountForLiker && likesPerKey < likeCountForNextLiker) {
+//                                        [likersByCount insertObject:key atIndex:i];
+//                                        break;
+//                                    }
+//                                }
+//                                
+//                            }
+//                        }
+//                    }
+//                    
+//                    /**
+//                     *  If we've reached the end and the liker isn't in the post
+//                     *  then we need to add the user.
+//                     */
+//                    
+//                    if (![likersByCount containsObject:key]) {
+//                        [likersByCount addObject:key];
+//                    }
+//                }
+//                
+//                /** Look for likes on the comments. */
+//                if (comments) {
+//                    
+//                    /** Iterate the comments, looking for ones posted by me. */
+//                    NSArray *commentContentsForPost = comments[@"data"];
+//                    
+//                    if ([commentContentsForPost isKindOfClass:[NSArray class]]) {
+//                        /** Iterate the comments. */
+//                        for (NSDictionary *comment in commentContentsForPost) {
+//                            
+//                            /** Read the commenter metadata. */
+//                            NSDictionary *commenter = comment[@"from"];
+//                            
+//                            if(![commenter isEqual:[NSNull null]]){
+//                                NSString *commenterName = commenter[@"name"];
+//                                
+//                                /** If we've found one of my own comments, count the likes. :-) */
+//                                if ([commenterName isEqualToString:@"Avi Greenberger"]) {
+//                                    NSNumber *numberOfLikesOnComment = comment[@"like_count"];
+//                                    likeCount += [numberOfLikesOnComment integerValue];
+//                                }
+//                                
+//                            }
+//                            /** We can't get per user likes on a comment with the current data set. */
+//                            
+//                        }
+//                    }
+//                }
+//                
+//                /**
+//                 *  Update progress bar.
+//                 */
+//                
+//                currentObject += 1.0;
+//                self.progressBar.doubleValue = currentObject;
+//                self.outputLabel.stringValue = [NSString stringWithFormat:@"Processed %li of %li posts.", (long)currentObject, (long)feed.count];
+//            }
+//            
+//            /**
+//             *  Log the results.
+//             */
+//            
+//            NSLog(@"Total likes: %li", likeCount);
+//            NSLog(@"Application Types: %@", applicationTypes);
+//            NSLog(@"Post Types: %@", types);
+//            NSLog(@"Likers (Most to Least): %@", likersByCount);
+//            NSLog(@"Likers and Like Counts: %@", likersAndCounts);
+//            
+//            /** Print likers by count. */
+//            for (NSInteger i = 0; i < [likersByCount count]; i++) {
+//                
+//                NSString *liker = likersByCount[i]; //  Liker name
+//                NSNumber *likes = likersAndCounts[liker][@"count"];   // Liker count
+//                
+//                NSString *summary = [NSString stringWithFormat:@"%@ : %li", liker, (long)[likes integerValue]];
+//                NSLog(@"%@", summary);
+//            }
+//            
+//            /**
+//             *  Save some files...
+//             */
+//            
+//            NSDictionary *summary = @{@"feed" : feed,
+//                                      @"posts_by_key" : postsByKey,
+//                                      @"like_count": @(likeCount),
+//                                      @"likers_by_likes" : likersByCount,
+//                                      @"likers_and_counts" : likersAndCounts};
+//            
+//            NSData *summaryData = [NSJSONSerialization dataWithJSONObject:summary options:9 error:nil];
+//            
+//            NSString *path = [[self pathToDesktop] stringByAppendingPathComponent:@"likes.json"];
+//            
+//            [summaryData writeToFile:path atomically:NO];
+//            
+//            /**
+//             *  Calculate runtime.
+//             */
+//            
+//            endTime = [NSDate date];
+//            
+//            NSTimeInterval runtime = [endTime timeIntervalSince1970] - [startTime timeIntervalSince1970];
+//
+//            
+//        }
+        
+                    /**
+                     *  Update the UI.
+                     */
+        
+                    [[self startButton] setEnabled:YES];
+                    [[self analyzeButton] setEnabled:YES];
     }
 }
-
+//
 
 #pragma mark -
 
