@@ -60,7 +60,7 @@
  *  Downloads the segments.
  */
 
-- (void)downloadFeedWithCompletion:(FLDownloadCompletionBlock)completion
+- (void)downloadFeed
 {
     
     /** Ensure we have aURL before we try to load a segment. */
@@ -69,8 +69,6 @@
         self.initialURL = [self _URLFromSettings];
         self.nextPagingURL = [self _URLFromSettings];
     }
-    
-    NSLog(@"Next URL: %@",self.nextPagingURL);
     
     __weak FLDownloader *weakSelf = self;
     
@@ -147,13 +145,15 @@
                 {
                     
                     /** If the paged part of the stream is empty, finish. */
-                    if (![feed count]) {
+                    if (![feed count])
+                    {
                         self.nextPagingURL = nil;
                     }
                     
                     /** Else, process each post in the stream. */
                     
-                    else {
+                    else
+                    {
                         /** Iterate each post. Nothing fancy yet. */
                         for (NSDictionary *post in feed) {
                             [weakSelf.posts addObject:post];
@@ -199,26 +199,22 @@
         }
         
         /** If nextPagingURL is nil by now, we're done. */
-        if (!weakSelf.nextPagingURL) {
-            
-            /** Run the completion block. */
-            if (completion) {
-                completion(YES);
-            }
-            
+        if (!weakSelf.nextPagingURL)
+        {
             /** Reset the URL. */
             weakSelf.nextPagingURL = weakSelf.initialURL;
             _loadedPages = 0;
-        }
-        
-        /** Else, continue... */
-        else {
-            [self downloadFeedWithCompletion:completion];
             
             if ([self.delegate respondsToSelector:@selector(downloaderDidFinish:)])
             {
                 [self.delegate downloaderDidFinish:self];
             }
+        }
+        
+        /** Else, continue... */
+        else
+        {
+            [self downloadFeed];
         }
     }];
 }
@@ -258,7 +254,6 @@
 {
     if (!self.nextPagingURL)
     {
-        
         _postID = postID;
         
         self.initialURL = [self _URLFromSettings];

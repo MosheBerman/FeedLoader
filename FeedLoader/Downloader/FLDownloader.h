@@ -58,7 +58,7 @@ typedef void(^FLDownloadCompletionBlock)(BOOL success);
  *  This method downloads data from the feed.
  */
 
-- (void)downloadFeedWithCompletion:(FLDownloadCompletionBlock)completion;
+- (void)downloadFeed;
 
 #pragma mark - State
 

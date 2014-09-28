@@ -83,21 +83,7 @@
     
     startTime = [NSDate date];
     
-    [self.downloader downloadFeedWithCompletion:^(BOOL success) {
-        
-        /** Calculate the end time*/
-        endTime = [NSDate date];
-        
-        /** Calculate the interval. (Time taken.) */
-        NSTimeInterval interval = [endTime timeIntervalSince1970] - [startTime timeIntervalSince1970];
-        
-        /** Update the output. */
-        self.outputLabel.stringValue = [NSString stringWithFormat: @"Loaded %li segments in total over %f seconds.", (long)self.downloader.loadedPages, interval];
-        
-        /** Save. */
-        [self saveDataToDiskQuietly:NO];
-        
-    }];
+    [self.downloader downloadFeed];
 }
 
 #pragma mark - FLDownloaderDelegate
@@ -113,7 +99,21 @@
     [self updateUI];
 }
 
-
+- (void)downloaderDidFinish:(FLDownloader *)downloader
+{
+    
+    /** Calculate the end time*/
+    endTime = [NSDate date];
+    
+    /** Calculate the interval. (Time taken.) */
+    NSTimeInterval interval = [endTime timeIntervalSince1970] - [startTime timeIntervalSince1970];
+    
+    /** Update the output. */
+    self.outputLabel.stringValue = [NSString stringWithFormat: @"Loaded %li segments in total over %f seconds.", (long)self.downloader.loadedPages, interval];
+    
+    /** Save. */
+    [self saveDataToDiskQuietly:NO];
+}
 
 #pragma mark - Errors.
 
