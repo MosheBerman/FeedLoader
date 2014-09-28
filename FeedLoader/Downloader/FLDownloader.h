@@ -13,7 +13,7 @@
  *  A completion block for when segments load.
  */
 
-typedef void(^FLDowloadCompletionBlock)(BOOL success);
+typedef void(^FLDownloadCompletionBlock)(BOOL success);
 
 @interface FLDownloader : NSObject
 
@@ -41,13 +41,24 @@ typedef void(^FLDowloadCompletionBlock)(BOOL success);
 
 @property (nonatomic, strong) NSString *postID;
 
-#pragma mark - 
-
 /**
  *
  */
 
-- (void)downloadFeedWithCompletion:(FLDowloadCompletionBlock)completion;
+@property (nonatomic, readonly) NSMutableArray *posts;
+
+#pragma mark - Downloading Data
+
+/** ---
+ *  @name Downloading Data
+ *  ---
+ */
+
+/**
+ *  This method downloads data from the feed.
+ */
+
+- (void)downloadFeedWithCompletion:(FLDownloadCompletionBlock)completion;
 
 #pragma mark - State
 

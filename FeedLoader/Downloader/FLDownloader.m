@@ -40,11 +40,27 @@
  *
  */
 
+- (instancetype)init
+{
+    self = [super init];
+    if (self) {
+        _posts = [[NSMutableArray alloc] init];
+    }
+    return self;
+}
+
+#pragma mark - Downloading Data
+
+/** ---
+ *  @name
+ *  ---
+ */
+
 /**
  *  Downloads the segments.
  */
 
-- (void)downloadFeedWithCompletion:(FLDowloadCompletionBlock)completion
+- (void)downloadFeedWithCompletion:(FLDownloadCompletionBlock)completion
 {
     
     /** Ensure we have aURL before we try to load a segment. */
@@ -282,6 +298,5 @@
 {
     return self.nextPagingURL != nil;
 }
-
 
 @end
