@@ -62,12 +62,18 @@
 
 - (void)downloadFeed
 {
+    /** 
+     *  Ensure we have a URL before we try to load a segment. 
+     *
+     *  Also, reset the
+     */
     
-    /** Ensure we have aURL before we try to load a segment. */
     if (!self.nextPagingURL)
     {
         self.initialURL = [self _URLFromSettings];
         self.nextPagingURL = [self _URLFromSettings];
+        self.posts = [[NSMutableArray alloc] init];
+        self.loadedPages = 0;
     }
     
     __weak FLDownloader *weakSelf = self;
@@ -201,9 +207,6 @@
         /** If nextPagingURL is nil by now, we're done. */
         if (!weakSelf.nextPagingURL)
         {
-            /** Reset the URL. */
-            weakSelf.nextPagingURL = weakSelf.initialURL;
-            _loadedPages = 0;
             
             if ([self.delegate respondsToSelector:@selector(downloaderDidFinish:)])
             {

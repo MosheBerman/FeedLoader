@@ -42,7 +42,7 @@ typedef void(^FLDownloadCompletionBlock)(BOOL success);
 @property (nonatomic, strong) NSString *postID;
 
 /**
- *
+ *  The posts that have been downloaded.
  */
 
 @property (nonatomic, readonly) NSMutableArray *posts;
