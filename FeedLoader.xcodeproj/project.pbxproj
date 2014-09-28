@@ -18,6 +18,7 @@
 		460699CF1820E640008DA62C /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 460699AE1820E640008DA62C /* Cocoa.framework */; };
 		460699D71820E640008DA62C /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 460699D51820E640008DA62C /* InfoPlist.strings */; };
 		460699D91820E640008DA62C /* FeedLoaderTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 460699D81820E640008DA62C /* FeedLoaderTests.m */; };
+		46E3432119D84EB200F2FFE2 /* FLDownloader.m in Sources */ = {isa = PBXBuildFile; fileRef = 46E3432019D84EB200F2FFE2 /* FLDownloader.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -50,6 +51,9 @@
 		460699D41820E640008DA62C /* FeedLoaderTests-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "FeedLoaderTests-Info.plist"; sourceTree = "<group>"; };
 		460699D61820E640008DA62C /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		460699D81820E640008DA62C /* FeedLoaderTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = FeedLoaderTests.m; sourceTree = "<group>"; };
+		46E3431F19D84EB200F2FFE2 /* FLDownloader.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = FLDownloader.h; path = Downloader/FLDownloader.h; sourceTree = "<group>"; };
+		46E3432019D84EB200F2FFE2 /* FLDownloader.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = FLDownloader.m; path = Downloader/FLDownloader.m; sourceTree = "<group>"; };
+		46E3432219D84F5000F2FFE2 /* FLDownloaderDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = FLDownloaderDelegate.h; path = Downloader/FLDownloaderDelegate.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -117,6 +121,9 @@
 			children = (
 				460699C01820E640008DA62C /* FLAppDelegate.h */,
 				460699C11820E640008DA62C /* FLAppDelegate.m */,
+				46E3432219D84F5000F2FFE2 /* FLDownloaderDelegate.h */,
+				46E3431F19D84EB200F2FFE2 /* FLDownloader.h */,
+				46E3432019D84EB200F2FFE2 /* FLDownloader.m */,
 				460699C31820E640008DA62C /* MainMenu.xib */,
 				460699C61820E640008DA62C /* Images.xcassets */,
 				460699B51820E640008DA62C /* Supporting Files */,
@@ -254,6 +261,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				460699C21820E640008DA62C /* FLAppDelegate.m in Sources */,
+				46E3432119D84EB200F2FFE2 /* FLDownloader.m in Sources */,
 				460699BB1820E640008DA62C /* main.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -465,6 +473,7 @@
 				460699DE1820E640008DA62C /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		460699DF1820E640008DA62C /* Build configuration list for PBXNativeTarget "FeedLoaderTests" */ = {
 			isa = XCConfigurationList;
@@ -473,6 +482,7 @@
 				460699E11820E640008DA62C /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
