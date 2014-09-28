@@ -25,13 +25,17 @@
 @optional
 
 /**
+ *  Called after a segment has loaded. 
  *
+ *  @param The downloader that loaded a segment.
  */
 
 - (void)downloaderDidCompleteSegment:(FLDownloader *)downloader;
 
 /**
+ *  Called when a downloader finishes.
  *
+ *  @param The downloader that finished.
  */
 
 - (void)downloaderDidFinish:(FLDownloader *)downloader;
