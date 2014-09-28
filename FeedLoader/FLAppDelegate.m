@@ -10,41 +10,19 @@
 #import "FLDownloader.h"
 
 @interface FLAppDelegate () <FLDownloaderDelegate> {
-    
     NSDate *startTime;
     NSDate *endTime;
 }
 
-@property (strong) NSMutableArray *posts;   //  All of the posts
-
-@property (strong) NSMutableArray *users;   //  All users
-
-@property (strong) NSMutableDictionary *likesByPost;
-
-@property (strong) NSMutableDictionary *commentsByPost;
-
-@property (strong) NSMutableDictionary *sharesByPost;
-
-@property (strong) NSMutableDictionary *postsByID;
-
-@property (strong) NSMutableDictionary *usersByID;
-
-@property (strong) NSString *initialURL;
-
-@property (strong) NSString *nextPagingURL;
-
 @property (nonatomic, strong) FLDownloader *downloader;
-
 
 @property (weak) IBOutlet NSTextField *outputLabel;
 @property (weak) IBOutlet NSButton *startButton;
-@property (weak) IBOutlet NSProgressIndicator *progressBar;
-@property (weak) IBOutlet NSButton *analyzeButton;
 
 
-#define kPostID @"10152800390984124"
+#define kPostID @"" // A Facebook Post ID
 
-#define kTokenID @"CAACEdEose0cBAIV7soPoBLQ4CoSKKXenW60TpYYAOzTy7ZA4nZB05JlzZAwDea9VUdgte9Ux9mvZCpyReTjubheeBYk8zrcVq8uEp3UzyQJ8DA7oB8cbtb9l0bx37Feyb0qBvFQTKeQeVgxzYtSxb8vCEYUDAZBYqgxOp8eSvQZCwCx4Debt9YFY3rM3E3ucjqA7iJZAs854pBoKBbjkOwU62lfcqJQe80ZD"
+#define kTokenID @""    //  A facebook token, providing access to the post specified above.
 
 @end
 
@@ -53,8 +31,6 @@
 - (void)applicationDidFinishLaunching:(NSNotification *)aNotification
 {
     // Insert code here to initialize your application
-    
-    //    self.nextPagingURL = @"https://graph.facebook.com/me/feed?since=1340323200&access_token=CAACuTTrtcLgBAGfHgqNCUb8qXqac1yhazwk1EZBADwZBdQZB7PIT1CGgiOmWmL86PxTWiSVY8yCQhAtZBYFel427s8SZBJZBimthz4aZCVlZCsRdtLiGPJQKwLNYYG2A4hzBJsWZCZBKS95csOa5H2csVavDB1eOiL5vjUTfPAnQSPjS67m6OtBCgUjCDcVQBmq64ZD";
     
     self.downloader = [[FLDownloader alloc] init];
     self.downloader.delegate = self;
