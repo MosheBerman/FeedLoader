@@ -44,16 +44,14 @@
  *  Downloads the segments.
  */
 
-- (void)downloadDataSegmentWithCompletion:(FLDowloadCompletionBlock)completion
+- (void)downloadFeedWithCompletion:(FLDowloadCompletionBlock)completion
 {
     
     /** Ensure we have aURL before we try to load a segment. */
     if (!self.nextPagingURL)
     {
-        if ([self.delegate respondsToSelector:@selector(downloader:failedWithError:)]) {
-            [self.delegate downloader:self failedWithError:@{@"code":@"", @"message": @""}];
-        }
-        return;
+        self.initialURL = [self _URLFromSettings];
+        self.nextPagingURL = [self _URLFromSettings];
     }
     
     NSLog(@"Next URL: %@",self.nextPagingURL);
@@ -63,6 +61,10 @@
     NSURL *url = [NSURL URLWithString:self.nextPagingURL];
     
     NSURLRequest *request = [NSURLRequest requestWithURL:url];
+    
+    /**
+     *  Start the load.
+     */
     
     [NSURLConnection sendAsynchronousRequest:request queue:[NSOperationQueue mainQueue] completionHandler:^(NSURLResponse *response, NSData *data, NSError *error) {
         
@@ -83,25 +85,27 @@
             /** If there was an error loading the data, show the error. */
             if (error)
             {
+                weakSelf.nextPagingURL = nil;
                 if (self.delegate)
                 {
                     [self.delegate downloader:self failedWithError:error.userInfo];
                 }
                 
-                weakSelf.nextPagingURL = nil;
+
             }
             
             /** Else, let's check for nil data */
             else if (!responseDictionary)
             {
                 NSDictionary *errorDictionary = @{@"code" : @(-1), @"message" : @"Failed to convert data into a dictionary."};
-
+                weakSelf.nextPagingURL = nil;
+                
                 if (self.delegate)
                 {
                     [self.delegate downloader:self failedWithError:errorDictionary];
                 }
                 
-                weakSelf.nextPagingURL = nil;
+
             }
             
             /** Else, let's parse the segment. */
@@ -113,12 +117,13 @@
                 /** If there's no data, we've got an issue. */
                 if (!feed) {
                     NSDictionary *errorDictionary = @{@"code" : @(-2), @"message" : @"There seems to be no data..."};
-                
+                    weakSelf.nextPagingURL = nil;
+                    
                     if (self.delegate)
                     {
                         [self.delegate downloader:self failedWithError:errorDictionary];
                     }
-                    weakSelf.nextPagingURL = nil;
+
                 }
                 
                 /** Otherwise, let's pull out the data, then check for the next page. */
@@ -129,7 +134,6 @@
                     if (![feed count]) {
                         self.nextPagingURL = nil;
                     }
-                    
                     
                     /** Else, process each post in the stream. */
                     
@@ -151,9 +155,9 @@
                 /** Now check for paging information. */
                 NSDictionary *paging = responseDictionary[@"paging"];
                 
-                /** If there's no paging, fail silently. */
-                if (!paging) {
-                    NSLog(@"There's no paging.");
+                /** If there's no paging, end the load. */
+                if (!paging)
+                {
                     weakSelf.nextPagingURL = nil;
                 }
                 
@@ -167,13 +171,12 @@
                 else
                 {
                     NSDictionary *errorDictionary = @{@"code" : @(0), @"message" : @"Looks like we've hit the end of the stream."};
+                    weakSelf.nextPagingURL = nil;
                     
                     if (self.delegate)
                     {
                         [self.delegate downloader:self failedWithError:errorDictionary];
                     }
-                    
-                    weakSelf.nextPagingURL = nil;
                 }
             }
             
@@ -194,7 +197,7 @@
         
         /** Else, continue... */
         else {
-            [self downloadDataSegmentWithCompletion:completion];
+            [self downloadFeedWithCompletion:completion];
             
             if ([self.delegate respondsToSelector:@selector(downloaderDidFinish:)])
             {
@@ -202,6 +205,82 @@
             }
         }
     }];
+}
+
+#pragma mark - Create a URL from the Settings
+
+/**
+ *  Creates a FB Graph API URL from the downloader's settings.
+ *
+ *  @return A URL string with a post and API key.
+ *
+ */
+
+- (NSString *)_URLFromSettings
+{
+    NSString *address = [NSString stringWithFormat:@"https://graph.facebook.com/v2.1/%@/comments/?limit=25&access_token=%@", self.postID, self.token];
+    
+    return address;
+}
+
+#pragma mark - Setters
+
+/** ---
+ *  @name Setters
+ *  ---
+ */
+
+/**
+ *  Sets the postID.
+ *
+ *  @discussion Will fail silently if the loader is working.
+ *
+ *  @param postID The new post ID.
+ */
+
+- (void)setPostID:(NSString *)postID
+{
+    if (!self.nextPagingURL)
+    {
+        
+        _postID = postID;
+        
+        self.initialURL = [self _URLFromSettings];
+    }
+}
+
+/**
+ *  Sets the token.
+ *
+ *  @discussion Will fail silently if the loader is working.
+ *
+ *  @param token The new post ID.
+ */
+
+- (void)setToken:(NSString *)token
+{
+    if (!self.nextPagingURL)
+    {
+        _token = token;
+        self.initialURL = [self _URLFromSettings];
+    }
+}
+
+
+#pragma mark - State
+
+/** ---
+ *  @name State
+ *  ---
+ */
+
+/**
+ *  @return YES if the loader is working, else NO.
+ */
+
+- (BOOL)working
+{
+    return self.nextPagingURL != nil;
 }
 
 

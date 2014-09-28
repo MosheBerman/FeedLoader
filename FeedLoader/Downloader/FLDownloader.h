@@ -24,15 +24,42 @@ typedef void(^FLDowloadCompletionBlock)(BOOL success);
 @property (nonatomic, strong) id<FLDownloaderDelegate> delegate;
 
 /**
- *
+ *  The number of pages loaded.
  */
 
 @property (nonatomic, assign) NSInteger loadedPages;
 
 /**
+ *  A Facebook API Key.
+ */
+
+@property (nonatomic, strong) NSString *token;
+
+/**
+ *  The post ID to load from.
+ */
+
+@property (nonatomic, strong) NSString *postID;
+
+#pragma mark - 
+
+/**
  *
  */
 
-- (void)downloadDataSegmentWithCompletion:(FLDowloadCompletionBlock)completion;
+- (void)downloadFeedWithCompletion:(FLDowloadCompletionBlock)completion;
+
+#pragma mark - State
+
+/** ---
+ *  @name State
+ *  ---
+ */
+
+/**
+ *  @return YES if the loader is working, else NO.
+ */
+
+- (BOOL)working;
 
 @end
