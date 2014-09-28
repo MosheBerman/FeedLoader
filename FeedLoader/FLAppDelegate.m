@@ -92,7 +92,10 @@
     NSString *message = dictionary[@"message"];
     NSError *error = [NSError errorWithDomain:message code:code userInfo:dictionary];
     
-    [self showErrorAlertWithError:error];
+    if (code != 0)
+    {
+         [self showErrorAlertWithError:error];   
+    }
 }
 
 /**
