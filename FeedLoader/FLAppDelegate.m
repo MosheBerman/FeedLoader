@@ -44,7 +44,7 @@
 
 #define kPostID @"10152800390984124"
 
-#define kTokenID @"CAACEdEose0cBAJEUdNgHOH9g2EliZCZAJRDhwZAeDu80EaAqF4hVbAKMjShL1R0RwZCZCIMUJkemfeMqF1dUba0WN9tQeoP7ZCJM8k0kktLB5rNKKetNHIFLziBcqlx1xH2OEBb5DjZB2DTJMEoGyPqKISsZB1BgZCOgOb4yfbTbNxdUNz88XedUb6sdRfXzRLzxgmoS3RETFzJYnbpcZBPS0kRvhP8F1u4oYZD"
+#define kTokenID @"CAACEdEose0cBAIV7soPoBLQ4CoSKKXenW60TpYYAOzTy7ZA4nZB05JlzZAwDea9VUdgte9Ux9mvZCpyReTjubheeBYk8zrcVq8uEp3UzyQJ8DA7oB8cbtb9l0bx37Feyb0qBvFQTKeQeVgxzYtSxb8vCEYUDAZBYqgxOp8eSvQZCwCx4Debt9YFY3rM3E3ucjqA7iJZAs854pBoKBbjkOwU62lfcqJQe80ZD"
 
 @end
 
@@ -70,6 +70,8 @@
     
     self.downloader = [[FLDownloader alloc] init];
     self.downloader.delegate = self;
+    self.downloader.token = kTokenID;
+    self.downloader.postID = kPostID;
     
 }
 
@@ -162,9 +164,11 @@
     /** Create an error container. */
     NSError *error = nil;
     
+    NSArray *posts = self.downloader.posts;
+    
     
     /** Convert the dictionary to data. */
-    NSData *data = [NSJSONSerialization dataWithJSONObject:self.posts options:NSJSONWritingPrettyPrinted error:&error];
+    NSData *data = [NSJSONSerialization dataWithJSONObject:posts options:NSJSONWritingPrettyPrinted error:&error];
     
     
     /** Get the save path. */
